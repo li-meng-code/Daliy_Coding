@@ -53,6 +53,12 @@ initial begin
     forever #5 clk = ~clk;
 end
 
+initial begin
+    $fsdbDumpfile("dma_axi_lite_tb.fsdb");
+    $fsdbDumpvars(0, dma_axi_lite_tb);
+    $fsdbDumpMDA();
+end
+
 dma_axi #(
     .ADDR_WIDTH(ADDR_WIDTH),
     .DATA_WIDTH(DATA_WIDTH),
@@ -133,30 +139,30 @@ task axil_write_same_cycle;
     input [DATA_WIDTH/8-1:0] strb;
     output [1:0]             resp;
 begin
-    @(posedge clk);
-    s_axil_awaddr  <= addr;
-    s_axil_awvalid <= 1'b1;
-    s_axil_wdata   <= data;
-    s_axil_wstrb   <= strb;
-    s_axil_wvalid  <= 1'b1;
-    s_axil_bready  <= 1'b0;
+    @(negedge clk);
+    s_axil_awaddr  = addr;
+    s_axil_awvalid = 1'b1;
+    s_axil_wdata   = data;
+    s_axil_wstrb   = strb;
+    s_axil_wvalid  = 1'b1;
+    s_axil_bready  = 1'b0;
 
     while (!(s_axil_awready && s_axil_wready)) begin
         @(posedge clk);
     end
 
-    @(posedge clk);
-    s_axil_awvalid <= 1'b0;
-    s_axil_wvalid  <= 1'b0;
-    s_axil_bready  <= 1'b1;
+    @(negedge clk);
+    s_axil_awvalid = 1'b0;
+    s_axil_wvalid  = 1'b0;
+    s_axil_bready  = 1'b1;
 
     while (!s_axil_bvalid) begin
         @(posedge clk);
     end
     resp = s_axil_bresp;
 
-    @(posedge clk);
-    s_axil_bready <= 1'b0;
+    @(negedge clk);
+    s_axil_bready = 1'b0;
 end
 endtask
 
@@ -167,38 +173,39 @@ task axil_write_aw_first;
     input [DATA_WIDTH/8-1:0] strb;
     output [1:0]             resp;
 begin
-    @(posedge clk);
-    s_axil_awaddr  <= addr;
-    s_axil_awvalid <= 1'b1;
-    s_axil_bready  <= 1'b0;
+    @(negedge clk);
+    s_axil_awaddr  = addr;
+    s_axil_awvalid = 1'b1;
+    s_axil_bready  = 1'b0;
 
     while (!s_axil_awready) begin
         @(posedge clk);
     end
 
-    @(posedge clk);
-    s_axil_awvalid <= 1'b0;
+    @(negedge clk);
+    s_axil_awvalid = 1'b0;
 
     repeat (2) @(posedge clk);
-    s_axil_wdata  <= data;
-    s_axil_wstrb  <= strb;
-    s_axil_wvalid <= 1'b1;
+    @(negedge clk);
+    s_axil_wdata  = data;
+    s_axil_wstrb  = strb;
+    s_axil_wvalid = 1'b1;
 
     while (!s_axil_wready) begin
         @(posedge clk);
     end
 
-    @(posedge clk);
-    s_axil_wvalid <= 1'b0;
-    s_axil_bready <= 1'b1;
+    @(negedge clk);
+    s_axil_wvalid = 1'b0;
+    s_axil_bready = 1'b1;
 
     while (!s_axil_bvalid) begin
         @(posedge clk);
     end
     resp = s_axil_bresp;
 
-    @(posedge clk);
-    s_axil_bready <= 1'b0;
+    @(negedge clk);
+    s_axil_bready = 1'b0;
 end
 endtask
 
@@ -209,38 +216,39 @@ task axil_write_w_first;
     input [DATA_WIDTH/8-1:0] strb;
     output [1:0]             resp;
 begin
-    @(posedge clk);
-    s_axil_wdata  <= data;
-    s_axil_wstrb  <= strb;
-    s_axil_wvalid <= 1'b1;
-    s_axil_bready <= 1'b0;
+    @(negedge clk);
+    s_axil_wdata  = data;
+    s_axil_wstrb  = strb;
+    s_axil_wvalid = 1'b1;
+    s_axil_bready = 1'b0;
 
     while (!s_axil_wready) begin
         @(posedge clk);
     end
 
-    @(posedge clk);
-    s_axil_wvalid <= 1'b0;
+    @(negedge clk);
+    s_axil_wvalid = 1'b0;
 
     repeat (2) @(posedge clk);
-    s_axil_awaddr  <= addr;
-    s_axil_awvalid <= 1'b1;
+    @(negedge clk);
+    s_axil_awaddr  = addr;
+    s_axil_awvalid = 1'b1;
 
     while (!s_axil_awready) begin
         @(posedge clk);
     end
 
-    @(posedge clk);
-    s_axil_awvalid <= 1'b0;
-    s_axil_bready  <= 1'b1;
+    @(negedge clk);
+    s_axil_awvalid = 1'b0;
+    s_axil_bready  = 1'b1;
 
     while (!s_axil_bvalid) begin
         @(posedge clk);
     end
     resp = s_axil_bresp;
 
-    @(posedge clk);
-    s_axil_bready <= 1'b0;
+    @(negedge clk);
+    s_axil_bready = 1'b0;
 end
 endtask
 
@@ -249,18 +257,18 @@ task axil_read;
     output [DATA_WIDTH-1:0] data;
     output [1:0]            resp;
 begin
-    @(posedge clk);
-    s_axil_araddr  <= addr;
-    s_axil_arvalid <= 1'b1;
-    s_axil_rready  <= 1'b0;
+    @(negedge clk);
+    s_axil_araddr  = addr;
+    s_axil_arvalid = 1'b1;
+    s_axil_rready  = 1'b0;
 
     while (!s_axil_arready) begin
         @(posedge clk);
     end
 
-    @(posedge clk);
-    s_axil_arvalid <= 1'b0;
-    s_axil_rready  <= 1'b1;
+    @(negedge clk);
+    s_axil_arvalid = 1'b0;
+    s_axil_rready  = 1'b1;
 
     while (!s_axil_rvalid) begin
         @(posedge clk);
@@ -268,8 +276,8 @@ begin
     data = s_axil_rdata;
     resp = s_axil_rresp;
 
-    @(posedge clk);
-    s_axil_rready <= 1'b0;
+    @(negedge clk);
+    s_axil_rready = 1'b0;
 end
 endtask
 
