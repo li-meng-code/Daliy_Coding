@@ -1,2 +1,2 @@
-./../async_fifo/async_fifo.sv
-./../async_fifo/async_fifo_tb.sv
+./../axi_lite_slave/lite_slave.sv
+./../axi_lite_slave/tb_lite_slave.sv

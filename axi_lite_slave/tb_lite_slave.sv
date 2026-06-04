@@ -1,6 +1,6 @@
 `timescale 1ns/1ps
 
-module dma_axi_lite_tb;
+module tb_lite_slave;
 
 localparam ADDR_WIDTH = 32;
 localparam DATA_WIDTH = 32;
@@ -54,12 +54,12 @@ initial begin
 end
 
 initial begin
-    $fsdbDumpfile("dma_axi_lite_tb.fsdb");
-    $fsdbDumpvars(0, dma_axi_lite_tb);
+    $fsdbDumpfile("tb_lite_slave.fsdb");
+    $fsdbDumpvars(0, tb_lite_slave);
     $fsdbDumpMDA();
 end
 
-dma_axi #(
+lite_slave #(
     .ADDR_WIDTH(ADDR_WIDTH),
     .DATA_WIDTH(DATA_WIDTH),
     .ID_WIDTH(ID_WIDTH)
