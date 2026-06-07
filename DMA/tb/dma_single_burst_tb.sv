@@ -166,17 +166,10 @@ initial begin
 end
 
 initial begin
-    $dumpfile("dma_single_burst_tb.vcd");
-    $dumpvars(0, dma_single_burst_tb);
-end
-
-`ifdef FSDB
-initial begin
     $fsdbDumpfile("dma_single_burst_tb.fsdb");
     $fsdbDumpvars(0, dma_single_burst_tb);
     $fsdbDumpMDA();
 end
-`endif
 
 task check_eq32;
     input [8*64-1:0] name;
