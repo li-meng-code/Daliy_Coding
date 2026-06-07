@@ -1,2 +1,3 @@
-./../fifo.sv
-./../tb/fifo_tb.sv
+./../dma_top.sv
+./../axi_master.sv
+./../tb/dma_single_burst_tb.sv

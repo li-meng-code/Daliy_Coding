@@ -1,6 +1,6 @@
 ##design and tb files
 
-TB =tb_fifo
+TB =dma_single_burst_tb
 DFILES =./../filelist.f
 SIM_DIR=simLog
 
