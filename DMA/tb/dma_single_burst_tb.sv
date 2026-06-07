@@ -213,11 +213,9 @@ task axil_write;
     input  [DATA_WIDTH-1:0] data;
     input  [STRB_WIDTH-1:0] strb;
     output [1:0]            resp;
-    integer aw_done;
-    integer w_done;
+    integer timeout;
     begin
-        aw_done = 0;
-        w_done  = 0;
+        timeout = 0;
 
         @(negedge clk);
         s_axil_awaddr  = addr;
@@ -227,31 +225,50 @@ task axil_write;
         s_axil_wvalid  = 1'b1;
         s_axil_bready  = 1'b1;
 
-        while(!aw_done || !w_done)begin
-            @(posedge clk);
-            #1;
-            if(!aw_done && s_axil_awvalid && s_axil_awready)
-                aw_done = 1;
-            if(!w_done && s_axil_wvalid && s_axil_wready)
-                w_done = 1;
+        while(!(s_axil_awready && s_axil_wready) && (timeout < 100))begin
             @(negedge clk);
-            if(aw_done)
-                s_axil_awvalid = 1'b0;
-            if(w_done)
-                s_axil_wvalid = 1'b0;
+            timeout = timeout + 1;
         end
 
-        while(!s_axil_bvalid)begin
+        if(timeout >= 100)begin
+            error_count = error_count + 1;
+            $display("[FAIL] AXI-Lite write timeout waiting AW/W ready addr=0x%08x time=%0t", addr, $time);
+            resp = 2'b10;
+            s_axil_awvalid = 1'b0;
+            s_axil_wvalid  = 1'b0;
+            s_axil_bready  = 1'b0;
+            s_axil_awaddr  = {ADDR_WIDTH{1'b0}};
+            s_axil_wdata   = {DATA_WIDTH{1'b0}};
+            s_axil_wstrb   = {STRB_WIDTH{1'b0}};
+        end
+        else begin
+
             @(posedge clk);
-            #1;
-        end
-        resp = s_axil_bresp;
+            @(negedge clk);
+            s_axil_awvalid = 1'b0;
+            s_axil_wvalid  = 1'b0;
 
-        @(negedge clk);
-        s_axil_bready = 1'b0;
-        s_axil_awaddr = {ADDR_WIDTH{1'b0}};
-        s_axil_wdata  = {DATA_WIDTH{1'b0}};
-        s_axil_wstrb  = {STRB_WIDTH{1'b0}};
+            timeout = 0;
+            while(!s_axil_bvalid && (timeout < 100))begin
+                @(negedge clk);
+                timeout = timeout + 1;
+            end
+
+            if(timeout >= 100)begin
+                error_count = error_count + 1;
+                $display("[FAIL] AXI-Lite write timeout waiting BVALID addr=0x%08x time=%0t", addr, $time);
+                resp = 2'b10;
+            end
+            else begin
+                resp = s_axil_bresp;
+            end
+
+            @(negedge clk);
+            s_axil_bready = 1'b0;
+            s_axil_awaddr = {ADDR_WIDTH{1'b0}};
+            s_axil_wdata  = {DATA_WIDTH{1'b0}};
+            s_axil_wstrb  = {STRB_WIDTH{1'b0}};
+        end
     end
 endtask
 
@@ -259,35 +276,56 @@ task axil_read;
     input  [ADDR_WIDTH-1:0] addr;
     output [DATA_WIDTH-1:0] data;
     output [1:0]            resp;
-    integer ar_done;
+    integer timeout;
     begin
-        ar_done = 0;
+        timeout = 0;
 
         @(negedge clk);
         s_axil_araddr  = addr;
         s_axil_arvalid = 1'b1;
         s_axil_rready  = 1'b1;
 
-        while(!ar_done)begin
-            @(posedge clk);
-            #1;
-            if(s_axil_arvalid && s_axil_arready)
-                ar_done = 1;
+        while(!s_axil_arready && (timeout < 100))begin
             @(negedge clk);
-            if(ar_done)
-                s_axil_arvalid = 1'b0;
+            timeout = timeout + 1;
         end
 
-        while(!s_axil_rvalid)begin
+        if(timeout >= 100)begin
+            error_count = error_count + 1;
+            $display("[FAIL] AXI-Lite read timeout waiting ARREADY addr=0x%08x time=%0t", addr, $time);
+            data = 0;
+            resp = 2'b10;
+            s_axil_arvalid = 1'b0;
+            s_axil_rready  = 1'b0;
+            s_axil_araddr  = {ADDR_WIDTH{1'b0}};
+        end
+        else begin
+
             @(posedge clk);
-            #1;
-        end
-        data = s_axil_rdata;
-        resp = s_axil_rresp;
+            @(negedge clk);
+            s_axil_arvalid = 1'b0;
 
-        @(negedge clk);
-        s_axil_rready = 1'b0;
-        s_axil_araddr = {ADDR_WIDTH{1'b0}};
+            timeout = 0;
+            while(!s_axil_rvalid && (timeout < 100))begin
+                @(negedge clk);
+                timeout = timeout + 1;
+            end
+
+            if(timeout >= 100)begin
+                error_count = error_count + 1;
+                $display("[FAIL] AXI-Lite read timeout waiting RVALID addr=0x%08x time=%0t", addr, $time);
+                data = 0;
+                resp = 2'b10;
+            end
+            else begin
+                data = s_axil_rdata;
+                resp = s_axil_rresp;
+            end
+
+            @(negedge clk);
+            s_axil_rready = 1'b0;
+            s_axil_araddr = {ADDR_WIDTH{1'b0}};
+        end
     end
 endtask
 
