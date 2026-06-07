@@ -1,6 +1,6 @@
 ##design and tb files
 
-TB =tb_async_fifo
+TB =tb_lite_slave
 DFILES =./../filelist.f
 SIM_DIR=simLog
 
