@@ -344,7 +344,7 @@ initial begin
     axil_write_same_cycle(CONTROL, 32'h0000_0003, 4'b1111, write_resp);
     check_resp("write CONTROL", write_resp, RESP_OK);
     axil_read(CONTROL, read_data, read_resp);
-    check_equal("CONTROL readback", read_data, 32'h0000_0003);
+    check_equal("CONTROL readback", read_data, 32'h0000_0002);
 
     // Invalid address response checks.
     axil_write_same_cycle(BAD_ADDR, 32'hDEAD_BEEF, 4'b1111, write_resp);

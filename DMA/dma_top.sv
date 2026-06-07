@@ -217,6 +217,8 @@ task reg_write;
     input  [DATA_WIDTH/8-1:0] wstrb;
     output [1:0] resp;
 
+    reg [DATA_WIDTH-1:0] control_next;
+
     begin
         resp=RESP_OK;
         case(addr[7:0])
@@ -233,7 +235,11 @@ task reg_write;
                 bytes_len<=apply_wstrb(bytes_len,wdata,wstrb);
             end
             CONTROL:begin
-                control<=apply_wstrb(control,wdata,wstrb);
+                control_next=apply_wstrb(control,wdata,wstrb);
+                control[START]<=control_next[START];
+                control[IRQ_EN]<=control_next[IRQ_EN];
+                control[CLEAR_DONE]<=control_next[CLEAR_DONE];
+                control[CLEAR_ERR]<=control_next[CLEAR_ERR];
             end
             default:begin
                 resp=RESP_SLVERR;
@@ -272,6 +278,10 @@ always@(posedge clk or negedge rst_n)begin
         s_axil_bresp   <= RESP_OK;
     end
     else begin
+        control[START]      <= 1'b0;
+        control[CLEAR_DONE] <= 1'b0;
+        control[CLEAR_ERR]  <= 1'b0;
+
         case(wr_state)
 
             WR_IDLE,
@@ -523,23 +533,7 @@ reg [ADDR_WIDTH-1:0]            dst_bk;
 reg [DATA_WIDTH-1:0]            burst_bk;
 reg [DATA_WIDTH-1:0]            bytes_bk;
 
-// start posedge detect
-reg  start_pre;   //reserve start result of pre-clk 
-wire start_edge;
-
 reg  dma_rd_err;
-
-always@(posedge clk  or negedge rst_n)begin
-    if(!rst_n)begin
-        start_pre<=0;
-    end
-    else begin
-        start_pre<=control[START];
-    end
-end
-
-assign start_edge=control[START] && !start_pre;
-
 
 function [31:0] byte2beat;    // calculate need how many beats,if byte=5,need 2beats;
     input[DATA_WIDTH-1:0] byte_count;
@@ -583,8 +577,14 @@ always@(posedge clk or negedge rst_n)begin
         wr_cmd_sent<=0;      
     end
     else begin
+        if(control[CLEAR_DONE])
+            status[DONE] <= 1'b0;
+
+        if(control[CLEAR_ERR])
+            status[ERR] <= 1'b0;
+
         case(dma_state) 
-            DMA_IDLE:if(start_edge)begin
+            DMA_IDLE:if(control[START])begin
                         
                         src_bk  <=src_addr;  
                         dst_bk  <=dst_addr;
