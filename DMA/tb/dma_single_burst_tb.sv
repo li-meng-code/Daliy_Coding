@@ -507,6 +507,10 @@ initial begin
     mem[32'h0000_0104 >> 2] = 32'haabb_ccdd;
     mem[32'h0000_0108 >> 2] = 32'h5566_7788;
     mem[32'h0000_010c >> 2] = 32'hdead_beef;
+    mem[32'h0000_0110 >> 2] = 32'h0123_4567;
+    mem[32'h0000_0114 >> 2] = 32'h89ab_cdef;
+    mem[32'h0000_0118 >> 2] = 32'hcafe_5eed;
+    mem[32'h0000_011c >> 2] = 32'h1357_9bdf;
 
     axil_write(SRC_ADDR,  32'h0000_0100, 4'hf, axil_resp);
     check_eq32("write SRC resp", {30'd0, axil_resp}, {30'd0, RESP_OK});
@@ -514,7 +518,7 @@ initial begin
     axil_write(DST_ADDR,  32'h0000_0200, 4'hf, axil_resp);
     check_eq32("write DST resp", {30'd0, axil_resp}, {30'd0, RESP_OK});
 
-    axil_write(BYTES_LEN, 32'd16, 4'hf, axil_resp);
+    axil_write(BYTES_LEN, 32'd32, 4'hf, axil_resp);
     check_eq32("write BYTES_LEN resp", {30'd0, axil_resp}, {30'd0, RESP_OK});
 
     axil_write(CONTROL, (32'h1 << IRQ_EN) | (32'h1 << START), 4'hf, axil_resp);
@@ -544,19 +548,23 @@ initial begin
 
     check_eq32("AR count", ar_count, 32'd1);
     check_eq32("AW count", aw_count, 32'd1);
-    check_eq32("R beat count", r_count, 32'd4);
-    check_eq32("W beat count", w_count, 32'd4);
+    check_eq32("R beat count", r_count, 32'd8);
+    check_eq32("W beat count", w_count, 32'd8);
     check_eq32("B count", b_count, 32'd1);
 
     check_eq32("AR addr", last_araddr, 32'h0000_0100);
     check_eq32("AW addr", last_awaddr, 32'h0000_0200);
-    check_eq8 ("AR len",  last_arlen,  8'd3);
-    check_eq8 ("AW len",  last_awlen,  8'd3);
+    check_eq8 ("AR len",  last_arlen,  8'd7);
+    check_eq8 ("AW len",  last_awlen,  8'd7);
 
     check_eq32("DST word0", mem[32'h0000_0200 >> 2], 32'h1122_3344);
     check_eq32("DST word1", mem[32'h0000_0204 >> 2], 32'haabb_ccdd);
     check_eq32("DST word2", mem[32'h0000_0208 >> 2], 32'h5566_7788);
     check_eq32("DST word3", mem[32'h0000_020c >> 2], 32'hdead_beef);
+    check_eq32("DST word4", mem[32'h0000_0210 >> 2], 32'h0123_4567);
+    check_eq32("DST word5", mem[32'h0000_0214 >> 2], 32'h89ab_cdef);
+    check_eq32("DST word6", mem[32'h0000_0218 >> 2], 32'hcafe_5eed);
+    check_eq32("DST word7", mem[32'h0000_021c >> 2], 32'h1357_9bdf);
 
     if(error_count == 0)
         $display("==== DMA single burst test PASSED ====");
