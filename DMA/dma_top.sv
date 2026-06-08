@@ -211,13 +211,25 @@ function [DATA_WIDTH-1:0] apply_wstrb;
     end
 endfunction
 
+reg [ADDR_WIDTH-1:0] awaddr_reg;
+reg [DATA_WIDTH-1:0] wdata_reg;
+reg [DATA_WIDTH/8-1:0] wstrb_reg;
+
+wire [DATA_WIDTH-1:0] control_next;
+wire [ADDR_WIDTH-1:0] wr_addr_sel;
+wire [DATA_WIDTH-1:0] wr_data_sel;
+wire [DATA_WIDTH/8-1:0] wstrb_sel;
+assign wr_addr_sel = aw_fire ? s_axil_awaddr : awaddr_reg;
+assign wr_data_sel = w_fire  ? s_axil_wdata  : wdata_reg;
+assign wstrb_sel   = w_fire  ? s_axil_wstrb  : wstrb_reg;
+
+assign control_next = apply_wstrb(control,wr_data_sel,wstrb_sel);
+
 task reg_write;
     input  [ADDR_WIDTH-1:0]  addr;
     input  [DATA_WIDTH-1:0]  wdata;
     input  [DATA_WIDTH/8-1:0] wstrb;
     output [1:0] resp;
-
-    reg [DATA_WIDTH-1:0] control_next;
 
     begin
         resp=RESP_OK;
@@ -235,7 +247,7 @@ task reg_write;
                 bytes_len<=apply_wstrb(bytes_len,wdata,wstrb);
             end
             CONTROL:begin
-                control_next=apply_wstrb(control,wdata,wstrb);
+                
                 control[START]<=control_next[START];
                 control[IRQ_EN]<=control_next[IRQ_EN];
                 control[CLEAR_DONE]<=control_next[CLEAR_DONE];
@@ -255,10 +267,7 @@ endtask
 // write state machine
 // =========================================================
 
-reg [1:0] wr_state;
-reg [ADDR_WIDTH-1:0] awaddr_reg;
-reg [DATA_WIDTH-1:0] wdata_reg;
-reg [DATA_WIDTH/8-1:0] wstrb_reg;
+reg [1:0]              wr_state;
 reg                    aw_seen;
 reg                    w_seen;
 
@@ -300,9 +309,9 @@ always@(posedge clk or negedge rst_n)begin
                 if((aw_fire || aw_seen) && (w_fire || w_seen))begin
 
                       reg_write(
-                        aw_fire ? s_axil_awaddr : awaddr_reg,
-                        w_fire  ? s_axil_wdata  : wdata_reg,
-                        w_fire  ? s_axil_wstrb  : wstrb_reg,
+                        wr_addr_sel,
+                        wr_data_sel,
+                        wstrb_sel,
                         s_axil_bresp
                     );
                     aw_seen<=0;
