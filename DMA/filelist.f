@@ -1,3 +1,5 @@
-./../dma_top.sv
+./../dma_pkg.sv
+./../lite_config.sv
 ./../axi_master.sv
-./../tb/dma_single_burst_tb.sv
+./../dma_top.sv
+./../tb/dma_two_transfer_tb.sv

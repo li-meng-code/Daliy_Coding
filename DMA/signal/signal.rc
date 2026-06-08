@@ -1,0 +1,107 @@
+Magic 271485
+Revision Verdi_T-2022.06-SP2-10
+
+; Window Layout <x> <y> <width> <height> <signalwidth> <valuewidth>
+viewPort 0 25 2560 719 332 164
+
+; File list:
+; openDirFile [-d delimiter] [-s time_offset] [-rf auto_bus_rule_file] path_name file_name
+openDirFile -d / "" "/home/user04/workspace/Daliy_Coding/DMA/simLog/inter.fsdb"
+
+; file time scale:
+; fileTimeScale ### s|ms|us|ns|ps
+
+; signal spacing:
+signalSpacing 5
+
+; windowTimeUnit is used for zoom, cursor & marker
+windowTimeUnit 1ms
+
+; waveform viewport range
+zoom 0.000000 0.000394 1m
+cursor 0.000335
+marker 0.000185
+
+; user define markers
+; userMarker time_pos marker_name color linestyle
+; visible top row signal index
+top 0
+; marker line index
+markerPos 21
+
+; event list
+; addEvent event_name event_expression
+; curEvent event_name
+
+
+
+COMPLEX_EVENT_BEGIN
+
+
+COMPLEX_EVENT_END
+
+
+
+; toolbar current search type
+; curSTATUS search_type
+curSTATUS ByChange
+
+
+addGroup "G1"
+activeDirFile "" "/home/user04/workspace/Daliy_Coding/DMA/simLog/inter.fsdb"
+addSignal -h 21 /dma_single_burst_tb/u_dut/clk
+addSignal -h 21 -UNSIGNED -HEX /dma_single_burst_tb/u_dut/s_axil_awaddr[31:0]
+addSignal -h 21 /dma_single_burst_tb/u_dut/s_axil_awvalid
+addSignal -h 21 -UNSIGNED -HEX /dma_single_burst_tb/u_dut/s_axil_wdata[31:0]
+addSignal -h 21 /dma_single_burst_tb/u_dut/s_axil_wvalid
+addSignal -h 21 /dma_single_burst_tb/u_dut/s_axil_wready
+addSignal -h 21 -UNSIGNED -HEX /dma_single_burst_tb/u_dut/s_axil_bresp[1:0]
+addSignal -h 21 -UNSIGNED -HEX /dma_single_burst_tb/u_dut/wr_state[1:0]
+addGroup "G2"
+addSignal -h 21 -UNSIGNED -HEX /dma_single_burst_tb/u_dut/src_addr[31:0]
+addSignal -h 21 -UNSIGNED -HEX /dma_single_burst_tb/u_dut/dst_addr[31:0]
+addSignal -h 21 -UNSIGNED -HEX /dma_single_burst_tb/u_dut/bytes_len[31:0]
+addSignal -h 21 -UNSIGNED -HEX /dma_single_burst_tb/u_dut/burst_len[31:0]
+addSignal -h 21 -UNSIGNED -HEX /dma_single_burst_tb/u_dut/control[31:0]
+addGroup "G3"
+addSignal -h 21 -UNSIGNED -HEX /dma_single_burst_tb/u_dut/u_axi_master/m_axi_araddr[31:0]
+addSignal -h 21 -UNSIGNED -HEX /dma_single_burst_tb/u_dut/u_axi_master/m_axi_arburst[1:0]
+addSignal -h 21 /dma_single_burst_tb/u_dut/u_axi_master/m_axi_arvalid
+addSignal -h 21 -UNSIGNED -HEX /dma_single_burst_tb/u_dut/u_axi_master/m_axi_awburst[1:0]
+addSignal -h 21 -UNSIGNED -HEX /dma_single_burst_tb/u_dut/u_axi_master/m_axi_awaddr[31:0]
+addSignal -h 21 -UNSIGNED -HEX /dma_single_burst_tb/u_dut/u_axi_master/wr_cnt[7:0]
+addSignal -h 21 /dma_single_burst_tb/u_dut/u_axi_master/m_axi_awvalid
+addSubGroup "G4"
+endSubGroup "G4"
+addSignal -h 21 -UNSIGNED -HEX /dma_single_burst_tb/u_dut/u_axi_master/m_axi_rdata[31:0]
+addSignal -h 21 /dma_single_burst_tb/u_dut/u_axi_master/m_axi_rvalid
+addSignal -h 21 -UNSIGNED -HEX /dma_single_burst_tb/u_dut/u_axi_master/m_axi_rresp[1:0]
+addSubGroup "G4"
+endSubGroup "G4"
+addSignal -h 21 -UNSIGNED -HEX /dma_single_burst_tb/u_dut/u_axi_master/m_axi_wdata[31:0]
+addSignal -h 21 /dma_single_burst_tb/u_dut/u_axi_master/m_axi_wlast
+addSignal -h 21 /dma_single_burst_tb/u_dut/u_axi_master/m_axi_wvalid
+addSignal -h 21 -UNSIGNED -HEX /dma_single_burst_tb/u_dut/u_axi_master/m_axi_bresp[1:0]
+addSignal -h 21 /dma_single_burst_tb/u_dut/u_axi_master/m_axi_bvalid
+addGroup "G4"
+
+; getSignalForm Scope Hierarchy Status
+; active file of getSignalForm
+activeDirFile "" "/home/user04/workspace/Daliy_Coding/DMA/simLog/inter.fsdb"
+
+GETSIGNALFORM_SCOPE_HIERARCHY_BEGIN
+getSignalForm close
+
+"/dma_single_burst_tb"
+"/dma_single_burst_tb/u_dut"
+"/dma_single_burst_tb/u_dut/u_axi_master"
+
+SCOPE_LIST_BEGIN
+"/dma_single_burst_tb"
+"/dma_single_burst_tb/u_dut"
+"/dma_single_burst_tb/u_dut/u_axi_master"
+SCOPE_LIST_END
+
+GETSIGNALFORM_SCOPE_HIERARCHY_END
+
+

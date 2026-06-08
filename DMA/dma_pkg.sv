@@ -1,4 +1,4 @@
-
+`timescale 1ns/1ps
 package dma_pkg;
 
     localparam integer DMA_DEFAULT_ADDR_WIDTH = 32;
