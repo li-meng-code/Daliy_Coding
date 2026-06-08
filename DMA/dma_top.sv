@@ -130,9 +130,10 @@ reg [DATA_WIDTH-1:0] burst_bk;
 reg [DATA_WIDTH-1:0] bytes_bk;
 reg                  dma_rd_err;
 
-wire [31:0] dma_total_beats;
-wire        dma_len_zero;
-wire        dma_len_too_large;
+reg [ADDR_WIDTH-1:0] cur_src_addr;
+reg [ADDR_WIDTH-1:0] cur_dst_addr;
+reg [8:0]            cur_burst_beats;
+
 
 assign rd_cmd_fire = rd_cmd_valid && rd_cmd_ready;
 assign wr_cmd_fire = wr_cmd_valid && wr_cmd_ready;
@@ -152,9 +153,7 @@ assign wr_resp_ready = (dma_state == DMA_WAIT_B);
 
 assign dma_irq = ctrl_irq_en && (status[DMA_STATUS_DONE] || status[DMA_STATUS_ERR]);
 
-assign dma_total_beats   = byte2beat(bytes_len);
-assign dma_len_zero      = (dma_total_beats == 32'd0);
-assign dma_len_too_large = (dma_total_beats > 32'd256);
+
 
 function [31:0] byte2beat;
     input [DATA_WIDTH-1:0] byte_count;
@@ -270,6 +269,59 @@ axi_master #(
     .m_axi_rready       (m_axi_rready)
 );
 
+
+//////DMA top control logic 
+
+wire [31:0] dma_total_beats;
+wire        dma_len_zero;
+
+
+assign dma_total_beats   = byte2beat(bytes_len);
+assign dma_len_zero      = (dma_total_beats == 32'd0);
+
+
+reg [8:0] max_burst_beats;
+reg [31:0] remain_beats;
+
+wire [8:0] issue_burst_beats;
+
+assign issue_burst_beats = calc_issue_burst_beats(remain_beats, max_burst_beats);
+
+
+function [8:0] calc_max_burst_beats;
+    input [DATA_WIDTH-1:0] cfg_burst_len;
+    begin
+        if (cfg_burst_len == 0)
+            calc_max_burst_beats = 9'd1;
+        else if (cfg_burst_len > 256)
+            calc_max_burst_beats = 9'd256;
+        else
+            calc_max_burst_beats = cfg_burst_len[8:0];
+    end
+endfunction
+
+function [8:0] calc_issue_burst_beats;
+    input [31:0] remain;
+    input [8:0]  max_burst;
+    begin
+        if (remain >= {23'd0, max_burst})
+            calc_issue_burst_beats = max_burst;
+        else
+            calc_issue_burst_beats = remain[8:0];
+    end
+endfunction
+
+function [ADDR_WIDTH-1:0] beat2byte;
+    input [8:0] beats;
+    begin
+        beat2byte = beats;
+        beat2byte = beat2byte << $clog2(DATA_WIDTH/8);
+    end
+endfunction
+
+
+
+
 always @(posedge clk or negedge rst_n) begin
     if(!rst_n)begin
         dma_state    <= DMA_IDLE;
@@ -287,6 +339,13 @@ always @(posedge clk or negedge rst_n) begin
         wr_cmd_beats <= 9'd0;
         rd_cmd_sent  <= 1'b0;
         wr_cmd_sent  <= 1'b0;
+
+        cur_src_addr    <= {ADDR_WIDTH{1'b0}};
+        cur_dst_addr    <= {ADDR_WIDTH{1'b0}};
+        cur_burst_beats <= 9'd0;
+        remain_beats    <= 32'd0;
+
+        max_burst_beats <= 9'd0;
     end
     else begin
         if(ctrl_clear_done)
@@ -297,15 +356,23 @@ always @(posedge clk or negedge rst_n) begin
 
         case(dma_state)
             DMA_IDLE: begin
+                status[DMA_STATUS_BUSY] <= 1'b0;
+                rd_cmd_valid <= 1'b0;
+                wr_cmd_valid <= 1'b0;
+                rd_cmd_sent  <= 1'b0;
+                wr_cmd_sent  <= 1'b0;
+
                 if(ctrl_start)begin
                     src_bk       <= src_addr;
                     dst_bk       <= dst_addr;
                     burst_bk     <= burst_len;
                     bytes_bk     <= bytes_len;
-                    rd_cmd_valid <= 1'b0;
-                    wr_cmd_valid <= 1'b0;
-                    rd_cmd_sent  <= 1'b0;
-                    wr_cmd_sent  <= 1'b0;
+                    max_burst_beats <= calc_max_burst_beats(burst_len);
+
+                    cur_src_addr <= src_addr;
+                    cur_dst_addr <= dst_addr;
+                    cur_burst_beats <= 9'd0;
+                    remain_beats <= dma_total_beats;
                     dma_rd_err   <= 1'b0;
 
                     if(dma_len_zero)begin
@@ -314,24 +381,12 @@ always @(posedge clk or negedge rst_n) begin
                         status[DMA_STATUS_ERR]  <= 1'b0;
                         dma_state               <= DMA_IDLE;
                     end
-                    else if(dma_len_too_large)begin
-                        status[DMA_STATUS_BUSY] <= 1'b0;
-                        status[DMA_STATUS_DONE] <= 1'b0;
-                        status[DMA_STATUS_ERR]  <= 1'b1;
-                        dma_state               <= DMA_IDLE;
-                    end
+                    
+                   
                     else begin
                         status[DMA_STATUS_BUSY] <= 1'b1;
                         status[DMA_STATUS_DONE] <= 1'b0;
                         status[DMA_STATUS_ERR]  <= 1'b0;
-
-                        rd_cmd_valid <= 1'b1;
-                        rd_cmd_addr  <= src_addr;
-                        rd_cmd_beats <= dma_total_beats[8:0];
-
-                        wr_cmd_valid <= 1'b1;
-                        wr_cmd_addr  <= dst_addr;
-                        wr_cmd_beats <= dma_total_beats[8:0];
 
                         dma_state <= DMA_ISSUE;
                     end
@@ -339,6 +394,24 @@ always @(posedge clk or negedge rst_n) begin
             end
 
             DMA_ISSUE: begin
+                if(!rd_cmd_sent)begin
+                    rd_cmd_valid <= 1'b1;
+                    rd_cmd_addr  <= cur_src_addr;
+                    rd_cmd_beats <= issue_burst_beats;
+                end
+                else begin
+                    rd_cmd_valid <= 1'b0;
+                end
+
+                if(!wr_cmd_sent)begin
+                    wr_cmd_valid <= 1'b1;
+                    wr_cmd_addr  <= cur_dst_addr;
+                    wr_cmd_beats <= issue_burst_beats;
+                end
+                else begin
+                    wr_cmd_valid <= 1'b0;
+                end
+
                 if(rd_cmd_fire)begin
                     rd_cmd_valid <= 1'b0;
                     rd_cmd_sent  <= 1'b1;
@@ -349,32 +422,59 @@ always @(posedge clk or negedge rst_n) begin
                     wr_cmd_sent  <= 1'b1;
                 end
 
-                if((rd_cmd_sent || rd_cmd_fire) && (wr_cmd_sent || wr_cmd_fire))
-                    dma_state <= DMA_STREAM;
+                if((rd_cmd_sent || rd_cmd_fire) && (wr_cmd_sent || wr_cmd_fire))begin
+                    cur_burst_beats <= issue_burst_beats;
+                    rd_cmd_valid    <= 1'b0;
+                    wr_cmd_valid    <= 1'b0;
+                    rd_cmd_sent     <= 1'b0;
+                    wr_cmd_sent     <= 1'b0;
+                    dma_state       <= DMA_STREAM;
+                end
             end
 
             DMA_STREAM: begin
                 if(rd_data_fire && (rd_data_resp != DMA_RESP_OK))
                     dma_rd_err <= 1'b1;
 
-                if(rd_data_fire && rd_data_last)
+                if(rd_data_fire && rd_data_last)begin
                     dma_state <= DMA_WAIT_B;
+                end
             end
 
             DMA_WAIT_B: begin
                 if(wr_resp_fire)begin
-                    dma_state               <= DMA_IDLE;
-                    status[DMA_STATUS_BUSY] <= 1'b0;
-
-                    if((wr_resp == DMA_RESP_OK) && !dma_rd_err)begin
-                        status[DMA_STATUS_DONE] <= 1'b1;
-                        status[DMA_STATUS_ERR]  <= 1'b0;
-                    end
-                    else begin
+                    if(dma_rd_err || (wr_resp != DMA_RESP_OK) ) begin
+                        status[DMA_STATUS_BUSY] <= 1'b0;
                         status[DMA_STATUS_ERR]  <= 1'b1;
                         status[DMA_STATUS_DONE] <= 1'b0;
+                        dma_rd_err              <= 1'b0;
+                        dma_state               <= DMA_IDLE;
+
                     end
-                end
+
+                    else begin
+                        if(remain_beats <= {23'd0, cur_burst_beats})begin
+                            remain_beats <= 32'd0;
+                            status[DMA_STATUS_BUSY] <= 1'b0;
+                            status[DMA_STATUS_ERR]  <= 1'b0;
+                            status[DMA_STATUS_DONE] <= 1'b1;
+
+                            dma_state               <= DMA_IDLE;
+                        end
+                        else begin
+                            remain_beats <= remain_beats - {23'd0, cur_burst_beats};
+                            cur_src_addr <= cur_src_addr + beat2byte(cur_burst_beats);
+                            cur_dst_addr <= cur_dst_addr + beat2byte(cur_burst_beats);
+
+                            status[DMA_STATUS_BUSY] <= 1'b1;
+                            status[DMA_STATUS_ERR]  <= 1'b0;
+                            status[DMA_STATUS_DONE] <= 1'b0;
+                            
+                            dma_state               <= DMA_ISSUE;  
+                        end
+                    end
+                end                          
+
             end
 
             default: begin
@@ -383,5 +483,8 @@ always @(posedge clk or negedge rst_n) begin
         endcase
     end
 end
+
+
+
 
 endmodule
